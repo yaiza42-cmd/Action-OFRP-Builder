@@ -50,11 +50,9 @@ jobs:
       contents: write
     steps:
  
-    # You might want to Checkout your repo first, but not mandatory
     - name: Check Out
       uses: actions/checkout@v4
 
-    # Cleanup The Actions Workspace Using Custom Composite Run Actions
     - name: Cleanup
       uses: rokibhasansagar/slimhub_actions@main
 
@@ -116,6 +114,19 @@ jobs:
         git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
+    # --- INICIO DEL PARCHE APLICADO ---
+    - name: Patch minui for A12.1
+      run: |
+        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+        echo "Aplicando parches para librecovery_ui..."
+        # 1. Fix multilínea para ev_init (remueve el exceso de argumentos)
+        perl -0777 -pi -e 's/ev_init\(std::bind\(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2\)[^;]+;/ev_init(std::bind(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2));/gs' bootable/recovery/recovery_ui/ui.cpp
+        # 2. Eliminar la llamada obsoleta a ev_iterate_touch_inputs
+        sed -i '/ev_iterate_touch_inputs/d' bootable/recovery/recovery_ui/ui.cpp
+        echo "Parches aplicados correctamente."
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+    # --- FIN DEL PARCHE APLICADO ---
+
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
       with:
@@ -137,7 +148,7 @@ jobs:
         ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/
         echo
         ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/
-
+      
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
