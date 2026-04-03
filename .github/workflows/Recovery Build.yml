@@ -145,15 +145,13 @@ jobs:
         rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/boot.img
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-    - name: Building recovery
+   - name: Building recovery
+      shell: bash
       run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        # Compilamos directamente el bootimage para tu Motorola
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd bootimage -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-      continue-on-error: true
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
 
     - name: Check the output directory before uploading
       run: |
