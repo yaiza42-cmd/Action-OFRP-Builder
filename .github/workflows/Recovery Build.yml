@@ -138,6 +138,13 @@ jobs:
       with:
         swap-size-gb: 12
 
+    - name: Pre-build Cleanup
+      run: |
+        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+        rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/ramdisk-recovery.img
+        rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/boot.img
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+
     - name: Building recovery
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
@@ -145,14 +152,14 @@ jobs:
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         set -e
+        # Al ser un dispositivo A/B con recovery en boot, el target suele ser 'bootimage' o 'recoveryimage'
+        # Usamos la variable para mantener la flexibilidad
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
       continue-on-error: true
 
     - name: Check the output directory before uploading
       run: |
-        ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/
-        echo
         ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/
       
     - name: Upload to Release
