@@ -114,22 +114,22 @@ jobs:
         git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-    # --- INICIO DEL PARCHE ACTUALIZADO ---
-    - name: Patch minui for A12.1
+    # --- PARCHE PARA ERROR 97% (gr_texticon) ---
+    - name: Patch minui and recovery_ui for A12.1
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        echo "Aplicando parches para librecovery_ui y minui..."
+        echo "Corrigiendo discrepancia de const GRSurface en gr_texticon..."
         
-        # 1. Fix multilínea para ev_init
+        # 1. Corregir ui.cpp (lo que hicimos antes para ev_init)
         perl -0777 -pi -e 's/ev_init\(std::bind\(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2\)[^;]+;/ev_init(std::bind(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2));/gs' bootable/recovery/recovery_ui/ui.cpp
-        
-        # 2. Eliminar la llamada obsoleta a ev_iterate_touch_inputs
         sed -i '/ev_iterate_touch_inputs/d' bootable/recovery/recovery_ui/ui.cpp
         
-        # 3. Fix para el error de enlace (Linker) de gr_texticon al 97%
-        find bootable/recovery/recovery_ui -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i '/gr_texticon/s/GRSurface\*/const GRSurface\*/g' {} +
-        
-        echo "Parches aplicados correctamente."
+        # 2. Corregir todas las menciones de gr_texticon que no tengan el 'const'
+        # Esto busca específicamente la firma que causa el error y la actualiza
+        find bootable/recovery -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/gr_texticon(int, int, GRSurface\*)/gr_texticon(int, int, const GRSurface\*)/g' {} +
+        find bootable/recovery -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/gr_texticon(int x, int y, GRSurface\* surface)/gr_texticon(int x, int y, const GRSurface\* surface)/g' {} +
+
+        echo "Parches aplicados."
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
     # --- FIN DEL PARCHE ACTUALIZADO ---
    
