@@ -114,19 +114,25 @@ jobs:
         git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-    # --- INICIO DEL PARCHE APLICADO ---
+    # --- INICIO DEL PARCHE ACTUALIZADO ---
     - name: Patch minui for A12.1
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        echo "Aplicando parches para librecovery_ui..."
-        # 1. Fix multilínea para ev_init (remueve el exceso de argumentos)
+        echo "Aplicando parches para librecovery_ui y minui..."
+        
+        # 1. Fix multilínea para ev_init
         perl -0777 -pi -e 's/ev_init\(std::bind\(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2\)[^;]+;/ev_init(std::bind(&RecoveryUI::OnInputEvent, this, std::placeholders::_1, std::placeholders::_2));/gs' bootable/recovery/recovery_ui/ui.cpp
+        
         # 2. Eliminar la llamada obsoleta a ev_iterate_touch_inputs
         sed -i '/ev_iterate_touch_inputs/d' bootable/recovery/recovery_ui/ui.cpp
+        
+        # 3. Fix para el error de enlace (Linker) de gr_texticon al 97%
+        find bootable/recovery/recovery_ui -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i '/gr_texticon/s/GRSurface\*/const GRSurface\*/g' {} +
+        
         echo "Parches aplicados correctamente."
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-    # --- FIN DEL PARCHE APLICADO ---
-
+    # --- FIN DEL PARCHE ACTUALIZADO ---
+   
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
       with:
@@ -139,7 +145,7 @@ jobs:
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         set -e
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
       continue-on-error: true
 
