@@ -138,6 +138,7 @@ jobs:
       with:
         swap-size-gb: 12
 
+# --- LIMPIEZA DE RAMDISK ANTES DE COMPILAR ---
     - name: Pre-build Cleanup
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
@@ -145,16 +146,33 @@ jobs:
         rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/boot.img
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-   - name: Building recovery
-      shell: bash
+    - name: Building recovery
       run: |
+        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+        set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd bootimage -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+        set -e
+        # Usamos mka recoveryimage para asegurar que se procesen bien los flags de OrangeFox
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd recoveryimage -j$(nproc --all)
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      continue-on-error: true
+
+    - name: Building recovery
+      run: |
+        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+        set +e
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        set -e
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      continue-on-error: true
 
     - name: Check the output directory before uploading
       run: |
+        ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/
+        echo
         ls -al ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/
       
     - name: Upload to Release
