@@ -148,13 +148,10 @@ jobs:
     - name: Building recovery
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        set -e
-        # Al ser un dispositivo A/B con recovery en boot, el target suele ser 'bootimage' o 'recoveryimage'
-        # Usamos la variable para mantener la flexibilidad
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+        # Compilamos directamente el bootimage para tu Motorola
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd bootimage -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
       continue-on-error: true
 
