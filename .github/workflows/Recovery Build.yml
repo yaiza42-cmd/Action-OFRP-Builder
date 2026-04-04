@@ -146,28 +146,28 @@ jobs:
         rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/boot.img
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-    - name: Building recovery
+    - name: Building OrangeFox
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        set -e
-        # Usamos mka recoveryimage para asegurar que se procesen bien los flags de OrangeFox
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd recoveryimage -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-      continue-on-error: true
-
-    - name: Building recovery
-      run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        set +e
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # --- VARIABLES DE ENTORNO DE AHORRO EXTREMO ---
+        export OFOX_DISABLE_MAGISK_BUILTIN=1
+        export FOX_MINIMAL_IMAGE=1
+        export FOX_USE_BASH=0
+        export FOX_USE_NANO=0
+        export FOX_USE_TAR=0
+        export FOX_USE_SED=0
+        export FOX_USE_XZ_UTILS=0
+        export FOX_REMOVE_AAPT=1
+        export FOX_DELETE_AROMA_FM=1
+        # ---------------------------------------------
+        
         set -e
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-      continue-on-error: true
 
     - name: Check the output directory before uploading
       run: |
